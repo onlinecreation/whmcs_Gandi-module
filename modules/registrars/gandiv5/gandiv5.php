@@ -757,14 +757,16 @@ function gandiv5_Sync($params)
                 'transferredAway' => true
             );
         }
-        if (!in_array($code, [401, 403, 404])) {
-            $expired = (strtotime($request->dates->registry_ends_at) < time())?true:false;
-            return array(
-                'expirydate' => date("Y-m-d", strtotime($request->dates->registry_ends_at)),
-                'active' => true, // Return true if the domain is active
-                'expired' => $expired,
-                'transferredAway' => false
-            );
+        if ($request->dates->registry_ends_at && !in_array($code, [401, 403, 404])) {
+            if (date("Y-m-d", strtotime($request->dates->registry_ends_at)) != '1970-01-01') {
+                $expired = (strtotime($request->dates->registry_ends_at) < time())?true:false;
+                return array(
+                    'expirydate' => date("Y-m-d", strtotime($request->dates->registry_ends_at)),
+                    'active' => true, // Return true if the domain is active
+                    'expired' => $expired,
+                    'transferredAway' => false
+                );
+            }
         }
     } catch (\Exception $e) {
         return array(
