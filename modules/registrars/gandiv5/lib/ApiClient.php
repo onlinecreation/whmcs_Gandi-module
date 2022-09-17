@@ -97,7 +97,9 @@ class ApiClient
             "phone" => $contacts["owner"]["phonenumberformatted"],
             "state" => $contacts["owner"]["state"],
             "type" => (empty($contacts["owner"]["orgname"]) ? 'individual' : 'company'), // One of: "individual", "company", "association", "publicbody", "reseller"
-            "email" => $contacts["owner"]["email"]
+            "email" => $contacts["owner"]["email"],
+            "mail_obfuscated" => true,
+            "data_obfuscated" => true,
         ];
         if (in_array($owner['country'], ['GF', 'GP', 'MQ', 'RE', 'YT'])) {
             $owner['state'] = 'FR-'.$owner['country'];
@@ -335,7 +337,7 @@ class ApiClient
                  "authorization: Apikey {$this->apiKey}",
                  "content-type: application/json"
              ),
-             CURLOPT_USERAGENT => 'WHMCS/1.3'
+             CURLOPT_USERAGENT => 'WHMCS/1.4'
          ));
         if ($method == "POST") {
             curl_setopt_array($curl, [ CURLOPT_CUSTOMREQUEST => "POST"]);
