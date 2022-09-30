@@ -145,7 +145,9 @@ function gandiv5_RegisterDomain($params)
         "phonecountrcCode" => $params["phonecc"],
         "phonenumberformatted" => $params['phonenumberformatted'],
         "orgname" => $params['companyname'],
-        "language" => (empty($params['language'])) ? $GLOBALS['CONFIG']['Language'] : $params['language']
+        "language" => (empty($params['language'])) ? $GLOBALS['CONFIG']['Language'] : $params['language'],
+        "mail_obfuscated" => true,
+        "data_obfuscated" => true,
     ];
     $apiKey = $params['API Key'];
     $registrationPeriod = $params['regperiod'];
@@ -210,7 +212,9 @@ function gandiv5_TransferDomain($params)
         "phonecountrcCode" => $params["phonecc"],
         "phonenumberformatted" => $params['phonenumberformatted'],
         "orgname" => $params['companyname'],
-        "language" => (empty($params['language'])) ? $GLOBALS['CONFIG']['Language'] : $params['language']
+        "language" => (empty($params['language'])) ? $GLOBALS['CONFIG']['Language'] : $params['language'],
+        "mail_obfuscated" => true,
+        "data_obfuscated" => true,
     ];
 
     if( $params['accountType'] == 'individual' ){
@@ -753,14 +757,16 @@ function gandiv5_Sync($params)
                 'transferredAway' => true
             );
         }
-        if (!in_array($code, [401, 403, 404])) {
-            $expired = (strtotime($request->dates->registry_ends_at) < time())?true:false;
-            return array(
-                'expirydate' => date("Y-m-d", strtotime($request->dates->registry_ends_at)),
-                'active' => true, // Return true if the domain is active
-                'expired' => $expired,
-                'transferredAway' => false
-            );
+        if ($request->dates->registry_ends_at && !in_array($code, [401, 403, 404])) {
+            if (date("Y-m-d", strtotime($request->dates->registry_ends_at)) != '1970-01-01') {
+                $expired = (strtotime($request->dates->registry_ends_at) < time())?true:false;
+                return array(
+                    'expirydate' => date("Y-m-d", strtotime($request->dates->registry_ends_at)),
+                    'active' => true, // Return true if the domain is active
+                    'expired' => $expired,
+                    'transferredAway' => false
+                );
+            }
         }
     } catch (\Exception $e) {
         return array(
