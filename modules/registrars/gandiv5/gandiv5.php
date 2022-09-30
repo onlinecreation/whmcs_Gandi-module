@@ -143,7 +143,9 @@ function gandiv5_RegisterDomain($params)
         "countryname" => $params["countryname"],
         "phonenumber" => $params["phonenumber"],
         "phonecountrcCode" => $params["phonecc"],
-        "phonenumberformatted" => $params['phonenumberformatted']
+        "phonenumberformatted" => $params['phonenumberformatted'],
+        "orgname" => $params['companyname'],
+        "language" => (empty($params['language'])) ? $GLOBALS['CONFIG']['Language'] : $params['language']
     ];
     $apiKey = $params['API Key'];
     $registrationPeriod = $params['regperiod'];
@@ -206,7 +208,9 @@ function gandiv5_TransferDomain($params)
         "countryname" => $params["countryname"],
         "phonenumber" => $params["phonenumber"],
         "phonecountrcCode" => $params["phonecc"],
-        "phonenumberformatted" => $params['phonenumberformatted']
+        "phonenumberformatted" => $params['phonenumberformatted'],
+        "orgname" => $params['companyname'],
+        "language" => (empty($params['language'])) ? $GLOBALS['CONFIG']['Language'] : $params['language']
     ];
 
     if( $params['accountType'] == 'individual' ){
@@ -740,12 +744,16 @@ function gandiv5_Sync($params)
         $domain = $params['domain'];
         $api = new ApiClient($params["apiKey"]);
         $request = $api->getDomainInfo($domain);
-        if ($request->code == 403) { // Transfered away
+        $code = 200; // default code because not set by API when everything is fine
+        if (isset($request->code)) {
+            $code = $request->code;
+        }
+        if (in_array($code, [403, 404])) { // Transfered away
             return array(
                 'transferredAway' => true
             );
         }
-        if ($request->code != 404) {
+        if (!in_array($code, [401, 403, 404])) {
             $expired = (strtotime($request->dates->registry_ends_at) < time())?true:false;
             return array(
                 'expirydate' => date("Y-m-d", strtotime($request->dates->registry_ends_at)),
@@ -840,4 +848,49 @@ function gandiv5_GetEPPCode($params)
         );
     }
 
+}
+
+/**
+ * Sync Transfer Status & Expiration Date.
+ *
+ * Transfer syncing is intended to ensure transfer status and expiry date
+ * changes made directly at the domain registrar are synced to WHMCS.
+ * It is called periodically for a transfer.
+ *
+ * @param array $params common module parameters
+ *
+ * @see https://developers.whmcs.com/domain-registrars/module-parameters/
+ *
+ * @return array
+ */
+function gandiv5_TransferSync($params)
+{
+    try {
+        $domain = $params['domain'];
+        $api = new ApiClient($params["apiKey"]);
+        $request = $api->getDomainInfo($domain);
+        if ($request->code == 403 || $request->code == 404) { // not finished
+            return array(
+                'completed' => false,
+                'failed' => false
+            );
+        }
+        if ($request->code != 404) {
+            $expired = (strtotime($request->dates->registry_ends_at) < time())?true:false;
+            return array(
+                'expirydate' => date("Y-m-d", strtotime($request->dates->registry_ends_at)),
+                'completed' => true, // Return true if the transfer is completed
+                'failed' => false,
+                'reason' => '',
+                'error' => ''
+            );
+        }
+    } catch (\Exception $e) {
+        return array(
+            'failed' => true,
+            'completed' => false,
+            'reason' => 'Transfer Error',
+            'error' => $e->getMessage()
+        );
+    }
 }
